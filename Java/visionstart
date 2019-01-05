@@ -1,0 +1,23 @@
+#!/bin/bash
+
+#taking time from the roborio
+NTP_SERVER=10.32.11.2
+NEEDS_SYNC=1
+printf "%s" "trying to conect to $NTP_SERVER NTP..."
+printf "\n"
+while [ "$NEEDS_SYNC" -ne "0" ]; do
+	printf "%c" "."
+    sudo ntpdate -t 4     $NTP_SERVER
+    NEEDS_SYNC=$?    # If this variable is set ot 0, time sync worked
+	sleep 2
+done
+
+#go to the directory of the vision 
+cd /home/pi/Documents/vision/Java/ 
+
+#ypu need this line to use py camera
+#sudo modprobe bcm2835-v4l2
+
+#start the vision
+#./gradlew run -offline
+

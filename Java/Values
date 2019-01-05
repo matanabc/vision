@@ -1,0 +1,34 @@
+#HSV Values:
+#Thu Nov 03 17:29:09 UTC 2016
+filterContoursMaxHeight=1000
+filterContoursMinArea=10
+camera_Exposure_Usb=0
+filterContoursMaxWidth=1000
+frame_Port=1185
+sMin=0.0
+sMax=100.0
+camera_Height=120
+filterContoursSolidityMin=0
+filterContoursSolidityMax=100
+roboRioIP=roborio-3211-FRC.local
+HSV_Port=1186
+camera_FPS_Pi=60
+camera_Id=0
+hMin=0.0
+filterContoursMinPerimeter=0
+filterContoursMinRatio=0
+camera_Brightness_Pi=20
+hMax=60.0
+vMin=0.0
+filterContoursMaxVertices=1000000
+filterContoursMinVertices=0
+camera_Brightness_Usb=0
+camera_Width=160
+vMax=100.0
+filterContoursMinHeight=0
+filterContoursMaxRatio=154
+filterContoursMinWidth=0
+table=SmartDashboard
+findContoursExternalOnly=false
+camera_FPS_Usb=30
+camera_Exposure_Pi=0
