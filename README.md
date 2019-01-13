@@ -10,4 +10,4 @@ instruction in Setup raspberry file
 * `./gradlew run --offline` - offline for not downlod wipilib update
 
 # Contact
-if you have any question you can send me mail: matanabc@gamil.com
+if you have any question you can send me email: matanabc@gamil.com
