@@ -105,11 +105,16 @@ public class FrameConsumerShowHSV implements Runnable{
 				gripPipeline.setValuesInFile();
 				gripPipeline.setValues();
 				
+				gripPipeline.hsvThreshold(hsv, hsv);
+				this.hsvSource.putFrame(hsv);//Presents only the hsv in port 1186
+				
 				gripPipeline.process(hsv);//take the hsv Mat and pot Threshold on it
 
 				ArrayList<MatOfPoint> contours = gripPipeline.filterContoursOutput(); //Getting the contours after the filter                                             
 				bound.clear();//Clear the contours from the last time
-
+ 
+				System.out.println(contours.size());
+				
 				for (MatOfPoint rect : contours) {//print the area of the contours that he fond
 					Rect r = Imgproc.boundingRect(rect);
 					bound.add(r);
@@ -125,7 +130,6 @@ public class FrameConsumerShowHSV implements Runnable{
 					c++;
 				}
 
-				this.hsvSource.putFrame(gripPipeline.hsvThresholdOutput());//Presents only the hsv in port 1186
 				this.imageSource.putFrame(inputImage.getMat());//Presents the frame and what what he detect in port 1185
 
 			}catch (Exception e) {

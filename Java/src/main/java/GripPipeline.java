@@ -105,8 +105,9 @@ public class GripPipeline {
 		Threshold(hsvThresholdInput, hsvThresholdHue, hsvThresholdSaturation, hsvThresholdValue, hsvThresholdOutput);*/
 
 		hsvThreshold(hsvThresholdInput, hsvThresholdOutput);
-
+		
 		/*
+		
 		// Step CV_erode0:
 		Mat cvErodeSrc = hsvThresholdOutput;
 		Mat cvErodeKernel = new Mat();
@@ -116,7 +117,7 @@ public class GripPipeline {
 		Scalar cvErodeBordervalue = new Scalar(-1);
 		cvErode(cvErodeSrc, cvErodeKernel, cvErodeAnchor, cvErodeIterations, cvErodeBordertype, cvErodeBordervalue, cvErodeOutput);
 
-
+		
 		// Step CV_dilate0:
 		Mat cvDilateSrc = cvErodeOutput;
 		Mat cvDilateKernel = new Mat();
@@ -125,10 +126,11 @@ public class GripPipeline {
 		int cvDilateBordertype = Core.BORDER_CONSTANT;
 		Scalar cvDilateBordervalue = new Scalar(-1);
 		cvDilate(cvDilateSrc, cvDilateKernel, cvDilateAnchor, cvDilateIterations, cvDilateBordertype, cvDilateBordervalue, cvDilateOutput);
-		 */
+		*/ 
 
 		//if(!HSVValueShow){
 		// Step Find_Contours0:
+		
 		Mat findContoursInput = hsvThresholdOutput;//cvDilateOutput;
 
 		findContours(findContoursInput, findContoursExternalOnly, findContoursOutput);
@@ -137,6 +139,7 @@ public class GripPipeline {
 		ArrayList<MatOfPoint> filterContoursContours = findContoursOutput;
 
 		filterContours(filterContoursContours, filterContoursMinArea, filterContoursMinPerimeter, filterContoursMinWidth, filterContoursMaxWidth, filterContoursMinHeight, filterContoursMaxHeight, filterContoursSolidity , filterContoursMaxVertices, filterContoursMinVertices, filterContoursMinRatio, filterContoursMaxRatio, filterContoursOutput);
+		
 		//}
 	}
 
@@ -202,7 +205,7 @@ public class GripPipeline {
 					new Scalar(hue[1], sat[1], val[1]), out);
 	}*/
 
-	private void hsvThreshold(Mat input, Mat out) {
+	public /*private*/ void hsvThreshold(Mat input, Mat out) {
 		Core.inRange(input, this.hsvThresholdMinScalar, this.hsvThresholdMaxScalar, out);
 	}
 
@@ -420,14 +423,13 @@ public class GripPipeline {
 			//HSV Save Values In File
 			this.properties.store(new FileOutputStream(FILE_PLACE), "HSV Values:");
 			
-			this.properties.setProperty("hMin", String.valueOf(this.VisionTable.getNumber("hMin", 0)));//Save to file as hMin value
-			this.properties.setProperty("sMin", String.valueOf(this.VisionTable.getNumber("sMin", 0)));//Save to file as sMin value
-			this.properties.setProperty("vMin", String.valueOf(this.VisionTable.getNumber("vMin", 0)));//Save to file as vMin value
+			this.properties.setProperty("hMin", String.valueOf(this.VisionTable.getNumber("H Min", 0)));//Save to file as hMin value
+			this.properties.setProperty("sMin", String.valueOf(this.VisionTable.getNumber("S Min", 0)));//Save to file as sMin value
+			this.properties.setProperty("vMin", String.valueOf(this.VisionTable.getNumber("V Min", 0)));//Save to file as vMin value
 
-			this.properties.setProperty("hMax", String.valueOf(this.VisionTable.getNumber("hMax", 0)));//Save to file as hMax value
-			this.properties.setProperty("sMax", String.valueOf(this.VisionTable.getNumber("sMax", 0)));//Save to file as sMax value
-			this.properties.setProperty("vMax", String.valueOf(this.VisionTable.getNumber("vMax", 0)));//Save to file as vMax value
-			this.properties.setProperty("vMax", String.valueOf(this.VisionTable.getNumber("vMax", 0)));//Save to file as vMax value
+			this.properties.setProperty("hMax", String.valueOf(this.VisionTable.getNumber("H Max", 0)));//Save to file as hMax value
+			this.properties.setProperty("sMax", String.valueOf(this.VisionTable.getNumber("S Max", 0)));//Save to file as sMax value
+			this.properties.setProperty("vMax", String.valueOf(this.VisionTable.getNumber("V Max", 0)));//Save to file as vMax value
 			
 			//Save Filter Values In File
 			this.properties.store(new FileOutputStream(FILE_PLACE), "Filter Values:");
