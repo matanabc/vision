@@ -9,6 +9,8 @@ import java.util.concurrent.BlockingQueue;
 
 import org.opencv.core.Mat;
 import org.opencv.core.MatOfPoint;
+import org.opencv.core.MatOfPoint2f;
+import org.opencv.core.RotatedRect;
 import org.opencv.core.Point;
 import org.opencv.core.Rect;
 import org.opencv.core.Scalar;
@@ -93,6 +95,11 @@ public class FrameConsumer implements Runnable{
 		long time = cal.getTimeInMillis();
 		int c=0;
 
+		double ratioBetweenTwoWanted = 50/-20;
+		double ratioBetweenTwo= 0;
+
+		int countoursRun = 0;
+
 		while(true){
 			try {
 				MatTime inputImage = this.queue.take();
@@ -109,6 +116,77 @@ public class FrameConsumer implements Runnable{
 					Imgproc.rectangle(inputImage.getMat(), r.tl(), r.br(), scalarGreen, 3);//printing
 				};
 
+				if(bound.size() == 2) {		
+					if(machTwoContours(new MatOfPoint2f(contours.get(0).toArray()), new MatOfPoint2f(contours.get(1).toArray()))) {
+
+						//taking the left point and the right point of the contour that he fond
+						x1 = Math.min(bound.get(0).tl().x, bound.get(1).tl().x);
+						x2 = Math.max(bound.get(0).br().x, bound.get(1).br().x);
+						y1 = Math.min(bound.get(0).tl().y, bound.get(1).tl().y);
+						y2 = Math.max(bound.get(0).br().y, bound.get(1).br().y);
+
+						//get the center of the contours that he fond
+						center_x = (x1 + x2)/2;
+						center_y = (y1 + y2)/2;
+
+						Imgproc.rectangle(inputImage.getMat(), new Point(x1, y1), new Point(x2, y2),scalarBlue, 3);//print the area from left point and the right point of the contor that he fond
+						Imgproc.rectangle(inputImage.getMat(), new Point(center_x, center_y), new Point(center_x, center_y), scalarRed, 3);//print the center
+
+
+					}
+
+					/*ratioBetweenTwo = (bound.get(0).tl().x + bound.get(0).width - bound.get(1).tl().x) / (bound.get(0).tl().y - bound.get(0).br().y);
+					if(ratioBetweenTwo <= ratioBetweenTwoWanted * 1.1 || ratioBetweenTwo >= ratioBetweenTwoWanted * 0.9) {
+
+						System.out.println("in");
+
+						//taking the left point and the right point of the contour that he fond
+						x1 = Math.min(bound.get(0).tl().x, bound.get(1).tl().x);
+						x2 = Math.max(bound.get(0).br().x, bound.get(1).br().x);
+						y1 = Math.min(bound.get(0).tl().y, bound.get(1).tl().y);
+						y2 = Math.max(bound.get(0).br().y, bound.get(1).br().y);
+
+						//get the center of the contours that he fond
+						center_x = (x1 + x2)/2;
+						center_y = (y1 + y2)/2;
+
+						Imgproc.rectangle(inputImage.getMat(), new Point(x1, y1), new Point(x2, y2),scalarBlue, 3);//print the area from left point and the right point of the contor that he fond
+						Imgproc.rectangle(inputImage.getMat(), new Point(center_x, center_y), new Point(center_x, center_y), scalarRed, 3);//print the center
+					}*/
+				} else if(bound.size() > 2) {
+					
+					countoursRun = 0;
+					
+					while (countoursRun < bound.size() - 1) {
+
+						if(machTwoContours(new MatOfPoint2f(contours.get(countoursRun).toArray()), new MatOfPoint2f(contours.get(countoursRun + 1).toArray()))) {
+							//taking the left point and the right point of the contour that he fond
+							x1 = Math.min(bound.get(countoursRun).tl().x, bound.get(countoursRun + 1).tl().x);
+							x2 = Math.max(bound.get(countoursRun).br().x, bound.get(countoursRun + 1).br().x);
+							y1 = Math.min(bound.get(countoursRun).tl().y, bound.get(countoursRun + 1).tl().y);
+							y2 = Math.max(bound.get(countoursRun).br().y, bound.get(countoursRun + 1).br().y);
+
+							//get the center of the contours that he fond
+							center_x = (x1 + x2)/2;
+							center_y = (y1 + y2)/2;
+
+							Imgproc.rectangle(inputImage.getMat(), new Point(x1, y1), new Point(x2, y2),scalarBlue, 3);//print the area from left point and the right point of the contor that he fond
+							Imgproc.rectangle(inputImage.getMat(), new Point(center_x, center_y), new Point(center_x, center_y), scalarRed, 3);//print the center
+
+							countoursRun += 2;
+
+							System.out.println("bound.size() = " + bound.size() + " countoursRun = " + countoursRun);
+
+						} else {
+							countoursRun += 1;
+						}
+					}
+
+				}
+
+
+
+				/*
 				if(bound.size() == 2){//if he find 2 contours
 
 					//taking the left point and the right point of the contour that he fond
@@ -124,6 +202,14 @@ public class FrameConsumer implements Runnable{
 					Imgproc.rectangle(inputImage.getMat(), new Point(x1, y1), new Point(x2, y2),scalarBlue, 3);//print the area from left point and the right point of the contor that he fond
 					Imgproc.rectangle(inputImage.getMat(), new Point(center_x, center_y), new Point(center_x, center_y), scalarRed, 3);//print the center
 
+					System.out.println(bound.get(0).tl().x + bound.get(0).width - bound.get(1).tl().x);
+					System.out.println(bound.get(0).tl().y - bound.get(0).br().y);
+
+					ratioBetweenTwo = (bound.get(0).tl().x + bound.get(0).width - bound.get(1).tl().x) / (bound.get(0).tl().y - bound.get(0).br().y);
+					if(ratioBetweenTwo <= ratioBetweenTwoWanted * 1.1 || ratioBetweenTwo >= ratioBetweenTwoWanted * 0.9) {
+						System.out.println("in");
+					}
+
 					//VisionTable.putNumber("center x",center_x);//send center_x to the robot
 					//VisionTable.putNumber("center y",center_y);//send center_y to the robot
 
@@ -136,9 +222,12 @@ public class FrameConsumer implements Runnable{
 					//VisionTable.putBoolean("find 2 contours", false);
 
 					//VisionTable.putString("TargetInfo", "0|");
-				}
+				}*/
 
-				VisionTable.putString("TargetInfo", center_x + ";" + center_y + ";" + inputImage.getTime());
+
+
+				//VisionTable.putString("TargetInfo", center_x + ";" + center_y + ";" + inputImage.getTime());
+				VisionTable.putString("TargetInfo", center_x + ";" + (x2-x1) + ";" + inputImage.getTime());
 
 				//print fps
 				if (Calendar.getInstance().getTimeInMillis() - time > 1000) {
@@ -155,5 +244,20 @@ public class FrameConsumer implements Runnable{
 				e.printStackTrace();
 			}
 		}
+	}
+
+	public double rotaiton(MatOfPoint2f points) {
+		RotatedRect ellipse = Imgproc.fitEllipse(points);
+
+		return ellipse.angle;
+	}
+
+	public boolean machTwoContours(MatOfPoint2f rightContoursPoints, MatOfPoint2f leftContoursPoints) {
+
+		System.out.println("left = " + rotaiton(leftContoursPoints) + ", right = " + rotaiton(rightContoursPoints));
+
+		System.out.println(rotaiton(rightContoursPoints) > 90 && rotaiton(leftContoursPoints) < 90);
+
+		return rotaiton(rightContoursPoints) > 90 && rotaiton(leftContoursPoints) < 90;
 	}
 }

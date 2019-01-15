@@ -51,12 +51,14 @@ public class Main {
 				//taking the frame from the Queue and do vision processing on them 
 				FrameConsumer consumer1 = new FrameConsumer(queue);
 				FrameConsumer consumer2 = new FrameConsumer(queue);
+				FrameConsumer consumer3 = new FrameConsumer(queue);
 				
 				//making them to work in Thread
 				new Thread(producer).start();
 
 				new Thread(consumer1).start();
 				new Thread(consumer2).start();
+				new Thread(consumer3).start();
 			}
 
 		}catch (Exception e) {

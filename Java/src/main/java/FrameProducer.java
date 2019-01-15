@@ -37,8 +37,8 @@ public class FrameProducer implements Runnable{
 			//sitting the camera:
 
 			//Usually this well be in low Resolution for faster process
-			this.camera.setResolution(Integer.parseInt(properties.getProperty("camera_Width", "160"))	,
-					Integer.parseInt(properties.getProperty("camera_Height", "120")));
+			this.camera.setResolution(Integer.parseInt(properties.getProperty("camera_Width", "320"))	,
+					Integer.parseInt(properties.getProperty("camera_Height", "240")));
 
 			if(usbCam) {
 				//These will be who you want or what the camera can do 
@@ -48,8 +48,8 @@ public class FrameProducer implements Runnable{
 			}else {//piCam
 				//These will be who you want or what the camera can do 
 				this.camera.setFPS(Integer.parseInt(properties.getProperty("camera_FPS_Pi", "60")));//fps
-				this.camera.setBrightness(Integer.parseInt(properties.getProperty("camera_Brightness_Pi", "50")));//Brightness
-				this.camera.getProperty("exposure_time_absolute").set(Integer.parseInt(properties.getProperty("camera_Exposure_Pi", "1")));//Exposure
+				this.camera.setBrightness(Integer.parseInt(properties.getProperty("camera_Brightness_Pi", "25")));//Brightness
+				this.camera.getProperty("exposure_time_absolute").set(Integer.parseInt(properties.getProperty("camera_Exposure_Pi", "0")));//Exposure
 				//System.out.println("exploser is set to - " + camera.getProperty("exposure_time_absolute").get());
 			}	
 		} catch (IOException e) {
