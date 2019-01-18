@@ -10,9 +10,9 @@ import java.util.concurrent.BlockingQueue;
 import org.opencv.core.Mat;
 import org.opencv.core.MatOfPoint;
 import org.opencv.core.MatOfPoint2f;
-import org.opencv.core.RotatedRect;
 import org.opencv.core.Point;
 import org.opencv.core.Rect;
+import org.opencv.core.RotatedRect;
 import org.opencv.core.Scalar;
 import org.opencv.imgproc.Imgproc;
 
@@ -33,15 +33,16 @@ public class FrameConsumer implements Runnable{
 	private int Width;
 	private int Height;
 
-	//stream port
-	private int streamPortShowCameraSeeAndDetect;//on port 1185 show what the camera see and what he detect
-	private int streamPortShowHsv;//on port 1186 show what he see whit the hsv values 
-
 	private CvSource imageSource = null;
 	private MjpegServer cvStream = null;
 
 	private CvSource hsvSource = null;
 	private MjpegServer hsvStream = null;
+
+	private double ratioBetweenTwo;
+	private final double RATIO_BETWEEN_2_NEED_TO_BE = 50/-20;//(w/h)
+	
+	private double rotation = 0;
 
 	public FrameConsumer(BlockingQueue<MatTime> queue) {
 		Properties properties = new Properties();
@@ -59,7 +60,7 @@ public class FrameConsumer implements Runnable{
 			this.cvStream = new MjpegServer("CV Image and detect Stream", Integer.parseInt(properties.getProperty("frame_Port", "1185")));
 			this.cvStream.setSource(imageSource);
 
-			this.hsvSource= new CvSource("CV hsv Source", VideoMode.PixelFormat.kMJPEG, Width, Height, FPS);
+			this.hsvSource = new CvSource("CV hsv Source", VideoMode.PixelFormat.kMJPEG, Width, Height, FPS);
 			this.hsvStream = new MjpegServer("CV hsv Stream",  Integer.parseInt(properties.getProperty("HSV_Port", "1186")));
 			this.hsvStream.setSource(hsvSource);
 
@@ -74,6 +75,7 @@ public class FrameConsumer implements Runnable{
 	public void run() {
 
 		ArrayList<Rect> bound = new ArrayList<Rect>();
+		ArrayList<MatOfPoint> contours;
 		Mat hsv = new Mat();
 		GripPipeline gripPipeline = new GripPipeline();
 
@@ -81,8 +83,15 @@ public class FrameConsumer implements Runnable{
 		double x2 = 0;
 		double y1 = 0;
 		double y2 = 0;
-		double center_x = 0;
-		double center_y = 0;
+
+		double[] center_x = {0, 0, 0};
+		double[] center_y = {0, 0, 0};	
+		double[] target_width = {0, 0, 0};	
+
+		int numOfPare = 0;
+
+		//double center_x = 0;
+		//double center_y = 0;
 
 		Scalar scalarGreen = new Scalar(0, 255, 0);
 		Scalar scalarRed = new Scalar(0, 0, 255);
@@ -95,10 +104,11 @@ public class FrameConsumer implements Runnable{
 		long time = cal.getTimeInMillis();
 		int c=0;
 
-		double ratioBetweenTwoWanted = 50/-20;
-		double ratioBetweenTwo= 0;
-
 		int countoursRun = 0;
+
+		int[] bigToSmall;
+		
+		boolean scale = false;
 
 		while(true){
 			try {
@@ -107,8 +117,9 @@ public class FrameConsumer implements Runnable{
 
 				gripPipeline.process(hsv);//take the hsv Mat and pot Threshold, find contours and filter contours on it
 
-				ArrayList<MatOfPoint> contours = gripPipeline.filterContoursOutput(); //Getting the contours after the filter                                             
+				contours = gripPipeline.filterContoursOutput(); //Getting the contours after the filter                                             
 				bound.clear();//Clear the contours from the last time
+
 
 				for (MatOfPoint rect : contours) {//print the area of the contours that he fond
 					Rect r = Imgproc.boundingRect(rect);
@@ -116,29 +127,18 @@ public class FrameConsumer implements Runnable{
 					Imgproc.rectangle(inputImage.getMat(), r.tl(), r.br(), scalarGreen, 3);//printing
 				};
 
-				if(bound.size() == 2) {		
-					if(machTwoContours(new MatOfPoint2f(contours.get(0).toArray()), new MatOfPoint2f(contours.get(1).toArray()))) {
+				bigToSmall = sort(bound);
 
-						//taking the left point and the right point of the contour that he fond
-						x1 = Math.min(bound.get(0).tl().x, bound.get(1).tl().x);
-						x2 = Math.max(bound.get(0).br().x, bound.get(1).br().x);
-						y1 = Math.min(bound.get(0).tl().y, bound.get(1).tl().y);
-						y2 = Math.max(bound.get(0).br().y, bound.get(1).br().y);
-
-						//get the center of the contours that he fond
-						center_x = (x1 + x2)/2;
-						center_y = (y1 + y2)/2;
-
-						Imgproc.rectangle(inputImage.getMat(), new Point(x1, y1), new Point(x2, y2),scalarBlue, 3);//print the area from left point and the right point of the contor that he fond
-						Imgproc.rectangle(inputImage.getMat(), new Point(center_x, center_y), new Point(center_x, center_y), scalarRed, 3);//print the center
-
-
+				if(bigToSmall.length >= 2) {
+					if(bigToSmall[0] - bigToSmall[1] > 0) {
+						scale = false;
+					} else {
+						scale = true;
 					}
+				}
 
-					/*ratioBetweenTwo = (bound.get(0).tl().x + bound.get(0).width - bound.get(1).tl().x) / (bound.get(0).tl().y - bound.get(0).br().y);
-					if(ratioBetweenTwo <= ratioBetweenTwoWanted * 1.1 || ratioBetweenTwo >= ratioBetweenTwoWanted * 0.9) {
-
-						System.out.println("in");
+				if(bound.size() == 2) {		
+					if(rotaitonIsGood(contours.get(0), contours.get(1), scale)) {
 
 						//taking the left point and the right point of the contour that he fond
 						x1 = Math.min(bound.get(0).tl().x, bound.get(1).tl().x);
@@ -146,46 +146,69 @@ public class FrameConsumer implements Runnable{
 						y1 = Math.min(bound.get(0).tl().y, bound.get(1).tl().y);
 						y2 = Math.max(bound.get(0).br().y, bound.get(1).br().y);
 
-						//get the center of the contours that he fond
-						center_x = (x1 + x2)/2;
-						center_y = (y1 + y2)/2;
+						if(ratioIsGood(x1, x2, y1, y2)) {
+							//get the center of the contours that he fond
+							center_x[0] = (x1 + x2)/2;
+							center_y[0] = (y1 + y2)/2;
+							target_width[0] = (x2 - x1);
 
-						Imgproc.rectangle(inputImage.getMat(), new Point(x1, y1), new Point(x2, y2),scalarBlue, 3);//print the area from left point and the right point of the contor that he fond
-						Imgproc.rectangle(inputImage.getMat(), new Point(center_x, center_y), new Point(center_x, center_y), scalarRed, 3);//print the center
-					}*/
+							Imgproc.rectangle(inputImage.getMat(), new Point(x1, y1), new Point(x2, y2),scalarBlue, 3);//print the area from left point and the right point of the contor that he fond
+							Imgproc.rectangle(inputImage.getMat(), new Point(center_x[0], center_y[0]), new Point(center_x[0], center_y[0]), scalarRed, 3);//print the center
+
+							for(int i = 1; i < center_x.length; i++) {
+								center_x[i] = center_x[0];
+								center_y[i] = center_y[0];
+								target_width[i] = (x2 - x1);
+							}
+						}
+					}
 				} else if(bound.size() > 2) {
-					
+					numOfPare = 0;
 					countoursRun = 0;
-					
-					while (countoursRun < bound.size() - 1) {
 
-						if(machTwoContours(new MatOfPoint2f(contours.get(countoursRun).toArray()), new MatOfPoint2f(contours.get(countoursRun + 1).toArray()))) {
+					while (countoursRun < bound.size() - 1) {
+						if(rotaitonIsGood(contours.get(countoursRun), contours.get(countoursRun + 1), scale)) {
+
 							//taking the left point and the right point of the contour that he fond
 							x1 = Math.min(bound.get(countoursRun).tl().x, bound.get(countoursRun + 1).tl().x);
 							x2 = Math.max(bound.get(countoursRun).br().x, bound.get(countoursRun + 1).br().x);
 							y1 = Math.min(bound.get(countoursRun).tl().y, bound.get(countoursRun + 1).tl().y);
 							y2 = Math.max(bound.get(countoursRun).br().y, bound.get(countoursRun + 1).br().y);
 
-							//get the center of the contours that he fond
-							center_x = (x1 + x2)/2;
-							center_y = (y1 + y2)/2;
+							if(ratioIsGood(x1, x2, y1, y2)) {
+								//get the center of the contours that he fond
+								center_x[numOfPare] = (x1 + x2)/2;
+								center_y[numOfPare] = (y1 + y2)/2;
+								target_width[numOfPare] = (x2 - x1);
 
-							Imgproc.rectangle(inputImage.getMat(), new Point(x1, y1), new Point(x2, y2),scalarBlue, 3);//print the area from left point and the right point of the contor that he fond
-							Imgproc.rectangle(inputImage.getMat(), new Point(center_x, center_y), new Point(center_x, center_y), scalarRed, 3);//print the center
+								Imgproc.rectangle(inputImage.getMat(), new Point(x1, y1), new Point(x2, y2),scalarBlue, 3);//print the area from left point and the right point of the contor that he fond
+								Imgproc.rectangle(inputImage.getMat(), new Point(center_x[0], center_y[0]), new Point(center_x[0], center_y[0]), scalarRed, 3);//print the center
 
-							countoursRun += 2;
-
-							System.out.println("bound.size() = " + bound.size() + " countoursRun = " + countoursRun);
-
+								numOfPare++;
+								countoursRun += 2;
+							}
 						} else {
 							countoursRun += 1;
 						}
 					}
 
+					for(int i = numOfPare; i < center_x.length; i++) {
+						if(i == 0) {
+							center_x[i] = center_x[0];
+							center_y[i] = center_y[0];
+							target_width[i] = target_width[0];
+						} else {
+							center_x[i] = center_x[i - 1];
+							center_y[i] = center_y[i - 1];
+							target_width[i] = target_width[i - 1];
+						}
+					}
+				} else {//if he find less then 2 contours, print red on the sides of the frame
+					Imgproc.rectangle(inputImage.getMat(), p0, p1, scalarRed, 10);//printing red on the sides of the frame 
 				}
 
 
-
+				//---------------------------------------------code of 2017-----------------------------------------------
 				/*
 				if(bound.size() == 2){//if he find 2 contours
 
@@ -224,21 +247,21 @@ public class FrameConsumer implements Runnable{
 					//VisionTable.putString("TargetInfo", "0|");
 				}*/
 
-
-
 				//VisionTable.putString("TargetInfo", center_x + ";" + center_y + ";" + inputImage.getTime());
-				VisionTable.putString("TargetInfo", center_x + ";" + (x2-x1) + ";" + inputImage.getTime());
+				//-------------------------------------------------------------------------------------------------------
+
+				sendValuesToRobot(center_x, center_y, target_width, inputImage.getTime());
 
 				//print fps
 				if (Calendar.getInstance().getTimeInMillis() - time > 1000) {
 					time = Calendar.getInstance().getTimeInMillis();
 					System.out.println(Thread.currentThread().getName() + " fps: " + c);
 					c = 0;
-				}else {
+				} else {
 					c++;
 				}
 
-				this.imageSource.putFrame(inputImage.getMat());//Presents the frame and what what he detect in port 1185
+				this.imageSource.putFrame(inputImage.getMat());//Presents the frame and what he detect, put it in port 1185
 
 			}catch (Exception e) {
 				e.printStackTrace();
@@ -246,18 +269,71 @@ public class FrameConsumer implements Runnable{
 		}
 	}
 
-	public double rotaiton(MatOfPoint2f points) {
+	public double rotaiton(MatOfPoint2f points, boolean scale) {
 		RotatedRect ellipse = Imgproc.fitEllipse(points);
 
-		return ellipse.angle;
+		double rotation = ellipse.angle;
+		
+		if(scale) {
+			rotation = -1 * (rotation - 180);
+		} 
+
+		return rotation;
 	}
 
-	public boolean machTwoContours(MatOfPoint2f rightContoursPoints, MatOfPoint2f leftContoursPoints) {
+	public boolean ratioIsGood(double x1, double x2, double y1, double y2) {
+		ratioBetweenTwo = (x2 - x1) / (y2 - y1);
 
-		System.out.println("left = " + rotaiton(leftContoursPoints) + ", right = " + rotaiton(rightContoursPoints));
+		return true;//ratioBetweenTwo <= RATIO_BETWEEN_2_NEED_TO_BE * 1.1 || ratioBetweenTwo >= RATIO_BETWEEN_2_NEED_TO_BE * 0.9;
+	}
 
-		System.out.println(rotaiton(rightContoursPoints) > 90 && rotaiton(leftContoursPoints) < 90);
+	public boolean rotaitonIsGood(MatOfPoint rightContourPoints, MatOfPoint leftContourPoints, boolean scale) {
 
-		return rotaiton(rightContoursPoints) > 90 && rotaiton(leftContoursPoints) < 90;
+		if(rightContourPoints.toArray().length < 5 || leftContourPoints.toArray().length < 5) {
+			return false;
+		}
+
+		//System.out.println("Right = " + rotaiton(new MatOfPoint2f(rightContourPoints.toArray()), rightContourPoints.width(), rightContourPoints.height()) + " left = " + rotaiton(new MatOfPoint2f(leftContourPoints.toArray()), leftContourPoints.width(), leftContourPoints.height()));
+
+		return rotaiton(new MatOfPoint2f(rightContourPoints.toArray()), scale) > 90
+				&& rotaiton(new MatOfPoint2f(leftContourPoints.toArray()), scale) < 90;
+
+		//return rotaiton(new MatOfPoint2f(rightContourPoints.toArray())) > 90 && rotaiton(new MatOfPoint2f(leftContourPoints.toArray())) < 90;
+	}
+
+	public void sendValuesToRobot(double[] x, double[] y, double[] target_w, long time) {
+		VisionTable.putString("TargetInfo", time + ";" + x[0] + ";" + y[0] + ";" + x[1] + ";" + y[1] + ";" + x[2] + ";" + y[2]);
+	}
+
+	public int[] sort(ArrayList<Rect> a) {
+
+		if(a.size() > 0 ) {
+			int[] smallXToBigX = new int[a.size()];
+			int[] p = new int[a.size()];
+
+			for(int i = 0; i < a.size(); i++) {
+				p[i] = a.get(i).x;
+			}
+
+			int minValue = a.get(0).x;
+			int minPlace = 0;
+
+			for(int i = 0; i < p.length; i++) {
+				for(int j = 0; j < p.length; j++) {
+					if(p[j] < minValue) {
+						minPlace = j;
+						minValue = p[j];
+					}
+				}
+				minValue = 600;
+				smallXToBigX[i] = minPlace;
+				p[minPlace] = 600;
+			}
+
+			return smallXToBigX;
+		}
+
+		return null;
 	}
 }
+
