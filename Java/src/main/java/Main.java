@@ -31,6 +31,9 @@ public class Main {
 			NetworkTable VisionTable = NetworkTable.getTable(properties.getProperty("table", "SmartDashboard"));
 
 			VisionTable.putBoolean("pi connect", true);//Upload to the robot that he connect to him 
+			
+			
+			VisionTable.putNumber("Raspberry status", 1);
 
 			BlockingQueue<MatTime> queue = new ArrayBlockingQueue<MatTime>(1);//Queue for all the frmes whe collect
 
@@ -60,6 +63,8 @@ public class Main {
 				new Thread(consumer2).start();
 				new Thread(consumer3).start();
 			}
+			
+			VisionTable.putNumber("Raspberry status", 2);
 
 		}catch (Exception e) {
 			System.out.println("Error: " + e);

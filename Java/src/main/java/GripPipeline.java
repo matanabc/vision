@@ -17,6 +17,8 @@ import org.opencv.core.Point;
 import org.opencv.core.Rect;
 import org.opencv.core.Scalar;
 import org.opencv.imgproc.Imgproc;
+import org.opencv.core.RotatedRect;
+
 
 import edu.wpi.first.wpilibj.networktables.NetworkTable;
 
@@ -83,7 +85,7 @@ public class GripPipeline {
 			//this.setHSVThresholdScalar();
 			//this.setFilterAndFindContorsValue();
 			this.setValues();
-			
+
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
@@ -105,9 +107,9 @@ public class GripPipeline {
 		Threshold(hsvThresholdInput, hsvThresholdHue, hsvThresholdSaturation, hsvThresholdValue, hsvThresholdOutput);*/
 
 		hsvThreshold(hsvThresholdInput, hsvThresholdOutput);
-		
-		
-		
+
+
+
 		// Step CV_erode0:
 		Mat cvErodeSrc = hsvThresholdOutput;
 		Mat cvErodeKernel = new Mat();
@@ -117,7 +119,7 @@ public class GripPipeline {
 		Scalar cvErodeBordervalue = new Scalar(-1);
 		cvErode(cvErodeSrc, cvErodeKernel, cvErodeAnchor, cvErodeIterations, cvErodeBordertype, cvErodeBordervalue, cvErodeOutput);
 
-		
+
 		// Step CV_dilate0:
 		Mat cvDilateSrc = cvErodeOutput;
 		Mat cvDilateKernel = new Mat();
@@ -126,11 +128,11 @@ public class GripPipeline {
 		int cvDilateBordertype = Core.BORDER_CONSTANT;
 		Scalar cvDilateBordervalue = new Scalar(-1);
 		cvDilate(cvDilateSrc, cvDilateKernel, cvDilateAnchor, cvDilateIterations, cvDilateBordertype, cvDilateBordervalue, cvDilateOutput);
-	
+
 
 		//if(!HSVValueShow){
 		// Step Find_Contours0:
-		
+
 		Mat findContoursInput = cvDilateOutput;//hsvThresholdOutput;//cvDilateOutput;
 
 		findContours(findContoursInput, findContoursExternalOnly, findContoursOutput);
@@ -138,7 +140,9 @@ public class GripPipeline {
 		// Step Filter_Contours0:
 		ArrayList<MatOfPoint> filterContoursContours = findContoursOutput;
 
-		filterContours(filterContoursContours, filterContoursMinArea, filterContoursMinPerimeter, filterContoursMinWidth, filterContoursMaxWidth, filterContoursMinHeight, filterContoursMaxHeight, filterContoursSolidity , filterContoursMaxVertices, filterContoursMinVertices, filterContoursMinRatio, filterContoursMaxRatio, filterContoursOutput);
+		//filterContours(filterContoursContours, filterContoursMinArea, filterContoursMinPerimeter, filterContoursMinWidth, filterContoursMaxWidth, filterContoursMinHeight, filterContoursMaxHeight, filterContoursSolidity , filterContoursMaxVertices, filterContoursMinVertices, filterContoursMinRatio, filterContoursMaxRatio, filterContoursOutput);
+
+		filterContours(findContoursOutput, filterContoursMinArea, filterContoursMinWidth, filterContoursMaxWidth, filterContoursMinHeight, filterContoursMaxHeight, filterContoursMinRatio, filterContoursMaxRatio, filterContoursOutput);
 		
 		//}
 	}
@@ -327,6 +331,36 @@ public class GripPipeline {
 		}
 	}
 
+	private void filterContours(List<MatOfPoint> inputContours, double minArea,
+			double minWidth, double maxWidth, double minHeight, double maxHeight, 
+			double minRatio, double maxRatio, List<MatOfPoint> output) {
+
+		output.clear();
+
+		//operation
+		for (int i = 0; i < inputContours.size(); i++) {
+			final MatOfPoint contour = inputContours.get(i);
+
+			//if(contour.toArray().length < 5) continue;
+
+			final Rect bb = Imgproc.boundingRect(contour);
+
+			if (bb.width < minWidth || bb.width > maxWidth) continue;
+			if (bb.height < minHeight || bb.height > maxHeight) continue;
+
+			final double area = Imgproc.contourArea(contour);
+			if (area < minArea) continue;
+
+			final double ratio = bb.width / (double)bb.height;
+			if (ratio < minRatio || ratio > maxRatio) continue;
+
+			/*RotatedRect ellipse = Imgproc.fitEllipse(new MatOfPoint2f(contour.toArray()));
+			if(ellipse.angle > 179 || (ellipse.angle < 135 && ellipse.angle > 45) || ellipse.angle < 1) continue;
+			*/
+			output.add(contour);
+		}
+	}
+
 	/*public void setHValues(double hMin, double hMax) {
 		this.hsvThresholdHue[0] = hMin;
 		this.hsvThresholdHue[1] = hMax;
@@ -415,14 +449,14 @@ public class GripPipeline {
 			e.printStackTrace();
 		}
 	}*/
-	
-	
+
+
 	public void setValuesInFile() {
 		try {
-			
+
 			//HSV Save Values In File
 			this.properties.store(new FileOutputStream(FILE_PLACE), "HSV Values:");
-			
+
 			this.properties.setProperty("hMin", String.valueOf(this.VisionTable.getNumber("H Min", 0)));//Save to file as hMin value
 			this.properties.setProperty("sMin", String.valueOf(this.VisionTable.getNumber("S Min", 0)));//Save to file as sMin value
 			this.properties.setProperty("vMin", String.valueOf(this.VisionTable.getNumber("V Min", 0)));//Save to file as vMin value
@@ -430,10 +464,10 @@ public class GripPipeline {
 			this.properties.setProperty("hMax", String.valueOf(this.VisionTable.getNumber("H Max", 0)));//Save to file as hMax value
 			this.properties.setProperty("sMax", String.valueOf(this.VisionTable.getNumber("S Max", 0)));//Save to file as sMax value
 			this.properties.setProperty("vMax", String.valueOf(this.VisionTable.getNumber("V Max", 0)));//Save to file as vMax value
-			
+
 			//Save Filter Values In File
 			this.properties.store(new FileOutputStream(FILE_PLACE), "Filter Values:");
-			
+
 			this.properties.setProperty("filterContoursMinArea", String.valueOf(this.VisionTable.getNumber("filterContoursMinArea", 50)));//Save to file as filterContoursMinArea value
 			this.properties.setProperty("filterContoursMinPerimeter", String.valueOf(this.VisionTable.getNumber("filterContoursMinPerimeter", 0)));//Save to file as filterContoursMinPerimeter value
 			this.properties.setProperty("filterContoursMinWidth", String.valueOf(this.VisionTable.getNumber("filterContoursMinWidth", 0)));//Save to file as filterContoursMinWidth value			
@@ -446,16 +480,16 @@ public class GripPipeline {
 			this.properties.setProperty("filterContoursMinVertices", String.valueOf(this.VisionTable.getNumber("filterContoursMinVertices", 0)));//Save to file as filterContoursMinVertices value
 			this.properties.setProperty("filterContoursMinRatio", String.valueOf(this.VisionTable.getNumber("filterContoursMinRatio", 0)));//Save to file as filterContoursMinRatio value
 			this.properties.setProperty("filterContoursMaxRatio", String.valueOf(this.VisionTable.getNumber("filterContoursMaxRatio", 15)));//Save to file as filterContoursMaxRatio value
-			
+
 			//Save Find Contours Values In File
 			this.properties.store(new FileOutputStream(FILE_PLACE), "Find Contours Values:");
 			this.properties.setProperty("findContoursExternalOnly", String.valueOf(this.VisionTable.getBoolean("findContoursExternalOnly", false)));//Save to file as findContoursExternalOnly value
-	
+
 		}catch (Exception e) {
 			e.printStackTrace();
 		}
 	}
-	
+
 	public void setValues() {
 		try {
 			//HSV Values
@@ -466,8 +500,8 @@ public class GripPipeline {
 			this.hsvThresholdMaxScalar = new Scalar(Double.valueOf(properties.getProperty("hMax", "255")),
 					Double.valueOf(properties.getProperty("sMax", "255")), 
 					Double.valueOf(properties.getProperty("vMax", "255")));
-			
-			
+
+
 			//Filter Values
 			this.findContoursExternalOnly = Boolean.valueOf(properties.getProperty("findContoursExternalOnly", "false"));
 			this.filterContoursMinArea = Double.valueOf(properties.getProperty("filterContoursMinArea", "50"));
@@ -484,6 +518,81 @@ public class GripPipeline {
 			this.filterContoursMaxRatio = Double.valueOf(properties.getProperty("filterContoursMaxRatio", "15"));
 			this.filterContoursSolidity[0] = this.filterContoursSolidityMin;
 			this.filterContoursSolidity[1] = this.filterContoursSolidityMax;
+		}catch (Exception e) {
+			e.printStackTrace();
+		}
+	}
+	
+	public void setValuesInFilePit() {
+		try {
+			//HSV Save Values In File
+			this.properties.store(new FileOutputStream(FILE_PLACE), "HSV Values Pit:");
+
+			this.properties.setProperty("hMinPit", String.valueOf(this.VisionTable.getNumber("H Min", 0)));//Save to file as hMin value
+			this.properties.setProperty("sMinPit", String.valueOf(this.VisionTable.getNumber("S Min", 0)));//Save to file as sMin value
+			this.properties.setProperty("vMinPit", String.valueOf(this.VisionTable.getNumber("V Min", 0)));//Save to file as vMin value
+
+			this.properties.setProperty("hMaxPit", String.valueOf(this.VisionTable.getNumber("H Max", 0)));//Save to file as hMax value
+			this.properties.setProperty("sMaxPit", String.valueOf(this.VisionTable.getNumber("S Max", 0)));//Save to file as sMax value
+			this.properties.setProperty("vMaxPit", String.valueOf(this.VisionTable.getNumber("V Max", 0)));//Save to file as vMax value
+
+			//Save Filter Values In File
+			this.properties.store(new FileOutputStream(FILE_PLACE), "Filter Values Pit:");
+
+			this.properties.setProperty("filterContoursMinAreaPit", String.valueOf(this.VisionTable.getNumber("filterContoursMinArea", 50)));//Save to file as filterContoursMinArea value
+			//this.properties.setProperty("filterContoursMaxAreaPit", String.valueOf(this.VisionTable.getNumber("filterContoursMaxArea", 50)));//Save to file as filterContoursMinArea value
+			this.properties.setProperty("filterContoursMinPerimeterPit", String.valueOf(this.VisionTable.getNumber("filterContoursMinPerimeter", 0)));//Save to file as filterContoursMinPerimeter value
+			this.properties.setProperty("filterContoursMinWidthPit", String.valueOf(this.VisionTable.getNumber("filterContoursMinWidth", 0)));//Save to file as filterContoursMinWidth value			
+			this.properties.setProperty("filterContoursMaxWidthPit", String.valueOf(this.VisionTable.getNumber("filterContoursMaxWidth", 1000)));//Save to file as filterContoursMaxWidth value			
+			this.properties.setProperty("filterContoursMinHeightPit", String.valueOf(this.VisionTable.getNumber("filterContoursMinHeight", 0)));//Save to file as filterContoursMinHeight value			
+			this.properties.setProperty("filterContoursMaxHeightPit", String.valueOf(this.VisionTable.getNumber("filterContoursMaxHeight", 1000)));//Save to file as filterContoursMaxHeight value
+			this.properties.setProperty("filterContoursSolidityMinPit", String.valueOf(this.VisionTable.getNumber("filterContoursSolidityMin", 0)));//Save to file as filterContoursSolidityMin value
+			this.properties.setProperty("filterContoursSolidityMaxPit", String.valueOf(this.VisionTable.getNumber("filterContoursSolidityMax", 100)));//Save to file as filterContoursSolidityMax value
+			this.properties.setProperty("filterContoursMaxVerticesPit", String.valueOf(this.VisionTable.getNumber("filterContoursMaxVertices", 1000000)));//Save to file as filterContoursMaxVertices value
+			this.properties.setProperty("filterContoursMinVerticesPit", String.valueOf(this.VisionTable.getNumber("filterContoursMinVertices", 0)));//Save to file as filterContoursMinVertices value
+			this.properties.setProperty("filterContoursMinRatioPit", String.valueOf(this.VisionTable.getNumber("filterContoursMinRatio", 0)));//Save to file as filterContoursMinRatio value
+			this.properties.setProperty("filterContoursMaxRatioPit", String.valueOf(this.VisionTable.getNumber("filterContoursMaxRatio", 15)));//Save to file as filterContoursMaxRatio value
+
+			//Save Find Contours Values In File
+			this.properties.store(new FileOutputStream(FILE_PLACE), "Find Contours Values:");
+			this.properties.setProperty("findContoursExternalOnly", String.valueOf(this.VisionTable.getBoolean("findContoursExternalOnly", false)));//Save to file as findContoursExternalOnly value
+
+		}catch (Exception e) {
+			e.printStackTrace();
+		}
+	}
+	
+	public void setValuesPit() {
+		try {
+			//HSV Values
+			this.hsvThresholdMinScalar = new Scalar(Double.valueOf(properties.getProperty("hMinPit", "0")),
+					Double.valueOf(properties.getProperty("sMinPit", "0")), 
+					Double.valueOf(properties.getProperty("vMinPit", "0")));
+
+			this.hsvThresholdMaxScalar = new Scalar(Double.valueOf(properties.getProperty("hMaxPit", "255")),
+					Double.valueOf(properties.getProperty("sMaxPit", "255")), 
+					Double.valueOf(properties.getProperty("vMaxPit", "255")));
+
+
+			//Filter Values
+			this.findContoursExternalOnly = Boolean.valueOf(properties.getProperty("findContoursExternalOnlyPit", "false"));
+			this.filterContoursMinArea = Double.valueOf(properties.getProperty("filterContoursMinAreaPit", "50"));
+			//this.filterContoursMaxArea = Double.valueOf(properties.getProperty("filterContoursMaxAreaPit", "5000"));
+			this.filterContoursMinPerimeter = Double.valueOf(properties.getProperty("filterContoursMinPerimeterPit", "0"));
+			this.filterContoursMinWidth = Double.valueOf(properties.getProperty("filterContoursMinWidthPit", "0"));
+			this.filterContoursMaxWidth = Double.valueOf(properties.getProperty("filterContoursMaxWidthPit", "1000"));
+			this.filterContoursMinHeight = Double.valueOf(properties.getProperty("filterContoursMinHeightPit", "0"));
+			this.filterContoursMaxHeight = Double.valueOf(properties.getProperty("filterContoursMaxHeightPit", "1000"));
+			this.filterContoursSolidityMin = Double.valueOf(properties.getProperty("filterContoursSolidityMinPit", "0"));
+			this.filterContoursSolidityMax = Double.valueOf(properties.getProperty("filterContoursSolidityMaxPit", "100"));
+			this.filterContoursMaxVertices = Double.valueOf(properties.getProperty("filterContoursMaxVerticesPit", "1000000"));
+			this.filterContoursMinVertices = Double.valueOf(properties.getProperty("filterContoursMinVerticesPit", "0"));
+			this.filterContoursMinRatio = Double.valueOf(properties.getProperty("filterContoursMinRatioPit", "0"));
+			this.filterContoursMaxRatio = Double.valueOf(properties.getProperty("filterContoursMaxRatioPit", "15"));
+			this.filterContoursSolidity[0] = this.filterContoursSolidityMin;
+			this.filterContoursSolidity[1] = this.filterContoursSolidityMax;
+			
+			//System.out.println("set pit mode");
 		}catch (Exception e) {
 			e.printStackTrace();
 		}

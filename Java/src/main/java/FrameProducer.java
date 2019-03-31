@@ -23,23 +23,27 @@ public class FrameProducer implements Runnable{
 	// This creates a CvSink for us to use. This grabs images from our selected camera, 
 	// and will allow us to use those images in opencv
 	CvSink imageSink = new CvSink("CV Image Grabber");
-	
-	private Properties properties;
-	private boolean useUSB;
-	
+
+	private Properties properties;	
 	private NetworkTable VisionTable = null;
-	
+
 	private int USBPort;
+	private boolean useUSB;
+	private String cameraKeyMode;
 
 	public FrameProducer(boolean usbCam, BlockingQueue<MatTime> queue) {
 		this.properties = new Properties();
-		
+
 		this.useUSB = usbCam;
 
 		try {
 			properties.load(new FileInputStream(FILE_PLACE));//fill place to use
-			
+
 			this.VisionTable = NetworkTable.getTable(properties.getProperty("table", "SmartDashboard"));
+			this.cameraKeyMode = "Camera To Use";//properties.getProperty("cameraKeyMode", "Camere Mode");
+
+			setCamera();
+
 
 			/*
 			//creating camera object 
@@ -73,27 +77,24 @@ public class FrameProducer implements Runnable{
 		}*/
 
 		//this.imageSink.setSource(this.camera);
-		
-		setCamera();
 
 		this.queue = queue;
 	}
 
 	public void run() {
-		
+
 		Mat inputImage = new Mat();
-		
+
 		while (true) {
 			// Grab a frame. If it has a frame time of 0, there was an error.
 			// Just skip and continue
-			
-			if((int) VisionTable.getNumber("H Min", 0) != USBPort) {
+
+			if((int) VisionTable.getNumber(cameraKeyMode, 0) != USBPort) {
+				System.out.println("in");
 				camera.free();
 				setCamera();
 			}
-			
-			//VisionTable.putBoolean("start", true);
-						
+
 			inputImage = new Mat();
 
 			long frameTime = imageSink.grabFrame(inputImage);
@@ -113,38 +114,59 @@ public class FrameProducer implements Runnable{
 		UsbCamera camera = new UsbCamera("CoprocessorCamera", cameraId);
 		return camera;
 	}
-	
+
 	private void setCamera() {
 		try {
 			properties.load(new FileInputStream(FILE_PLACE));//fill place to use
-			
-			USBPort = (int) VisionTable.getNumber("H Min", 0);
-			if(USBPort >= 0) {
+
+			USBPort = (int) VisionTable.getNumber(cameraKeyMode, 0);
+
+			if(USBPort > 0) {
+				//creating camera object 
+				// is the camera port, Usually the camera will be on device 0
+				//this.camera = setCamera(Integer.parseInt(properties.getProperty("camera_Id", "0")));
+
+				//sitting the camera:
+
+				//Usually this well be in low Resolution for faster process
+				int ID = USBPort - 1;
+
+				System.out.println("ID " + ID);
+				this.camera = setCamera(ID);
+
+				this.camera.setResolution(Integer.parseInt(properties.getProperty("camera_Width", "320"))	,
+						Integer.parseInt(properties.getProperty("camera_Height", "240")));
+				//this.camera.setFPS(Integer.parseInt(properties.getProperty("camera_FPS_Usb", "30")));//fps
+				this.camera.setFPS(10);
+				//this.camera.setBrightness(50);//Brightness
+				//this.camera.setExposureManual(50);//Exposure
+
+				//These will be who you want or what the camera can do 
+				this.camera.setBrightness(15);//Brightness
+				this.camera.setExposureManual(15);//Exposure
+
+
+			} else if (USBPort == 0) {
 				this.camera = setCamera(USBPort);
+
+				this.camera.setResolution(Integer.parseInt(properties.getProperty("camera_Width", "320"))	,
+						Integer.parseInt(properties.getProperty("camera_Height", "240")));
+				this.camera.setFPS(15);//fps
+
+				if(useUSB) {
+					//These will be who you want or what the camera can do 
+					this.camera.setBrightness(Integer.parseInt(properties.getProperty("camera_Brightness_Usb", "0")));//Brightness
+					this.camera.setExposureManual(Integer.parseInt(properties.getProperty("camera_Exposure_Usb", "0")));//Exposure
+				} else {//piCam
+					//These will be who you want or what the camera can do 
+					this.camera.setFPS(Integer.parseInt(properties.getProperty("camera_FPS_Pi", "60")));//fps
+					this.camera.setBrightness(Integer.parseInt(properties.getProperty("camera_Brightness_Pi", "50")));//Brightness
+					this.camera.getProperty("exposure_time_absolute").set(Integer.parseInt(properties.getProperty("camera_Exposure_Pi", "1")));//Exposure
+					//System.out.println("exploser is set to - " + camera.getProperty("exposure_time_absolute").get());
+				}	
 			}
 
-			//creating camera object 
-			// is the camera port, Usually the camera will be on device 0
-			//this.camera = setCamera(Integer.parseInt(properties.getProperty("camera_Id", "0")));
 
-			//sitting the camera:
-
-			//Usually this well be in low Resolution for faster process
-			this.camera.setResolution(Integer.parseInt(properties.getProperty("camera_Width", "320"))	,
-					Integer.parseInt(properties.getProperty("camera_Height", "240")));
-
-			if(useUSB) {
-				//These will be who you want or what the camera can do 
-				this.camera.setFPS(Integer.parseInt(properties.getProperty("camera_FPS_Usb", "30")));//fps
-				this.camera.setBrightness(Integer.parseInt(properties.getProperty("camera_Brightness_Usb", "0")));//Brightness
-				this.camera.setExposureManual(Integer.parseInt(properties.getProperty("camera_Exposure_Usb", "0")));//Exposure
-			}else {//piCam
-				//These will be who you want or what the camera can do 
-				this.camera.setFPS(Integer.parseInt(properties.getProperty("camera_FPS_Pi", "60")));//fps
-				this.camera.setBrightness(Integer.parseInt(properties.getProperty("camera_Brightness_Pi", "50")));//Brightness
-				this.camera.getProperty("exposure_time_absolute").set(Integer.parseInt(properties.getProperty("camera_Exposure_Pi", "1")));//Exposure
-				//System.out.println("exploser is set to - " + camera.getProperty("exposure_time_absolute").get());
-			}	
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
