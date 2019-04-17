@@ -150,7 +150,7 @@ public class ContourPaerHelper {
 		
 		//System.out.println((rightPointSort[3].x - leftPointSort[0].x) + " - " + (rightPointSort[2].x - leftPointSort[1].x));
 
-		return rightPointSort[3].x - leftPointSort[0].x < rightPointSort[2].x - leftPointSort[1].x;
+		return Math.abs(rightPointSort[3].x - leftPointSort[0].x) <= Math.abs(rightPointSort[2].x - leftPointSort[1].x);
 	}
 
 
