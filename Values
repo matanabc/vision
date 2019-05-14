@@ -1,21 +1,21 @@
 #Find Contours Values:
-#Wed Feb 27 22:30:16 EST 2019
-filterContoursMaxHeight=58.0
-filterContoursMinArea=30.0
-filterContoursMaxWidth=37.0
-sMin=141.0
+#Sun May 12 15:11:06 IDT 2019
+filterContoursMaxHeight=100.0
+filterContoursMinArea=121.0
+filterContoursMaxWidth=105.0
+sMin=128.0
 sMax=255.0
 filterContoursSolidityMin=0.0
 filterContoursSolidityMax=100.0
-hMin=58.0
+hMin=0.0
 filterContoursMinPerimeter=0.0
-filterContoursMinRatio=0.0
-hMax=95.0
-vMin=142.0
+filterContoursMinRatio=0.47
+hMax=32.0
+vMin=208.0
 filterContoursMaxVertices=1000000.0
 filterContoursMinVertices=0.0
 vMax=255.0
-filterContoursMinHeight=11.0
-filterContoursMaxRatio=5.0
-filterContoursMinWidth=5.0
+filterContoursMinHeight=21.0
+filterContoursMaxRatio=1.37
+filterContoursMinWidth=16.0
 findContoursExternalOnly=false

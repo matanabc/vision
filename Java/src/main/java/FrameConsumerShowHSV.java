@@ -102,15 +102,8 @@ public class FrameConsumerShowHSV implements Runnable{
 				//gripPipeline.setHSVThresholdValueInFile();//Take from the networkTable the value for HSV values, and save them in HSV value file
 				//gripPipeline.setHSVThresholdScalar();//Change the scaler for the Threshold
 				
-				if(NetworkTable.getTable("LiveWindow").getBoolean("Test Mode Vision", false)){					
-					gripPipeline.setValuesInFilePit();
-					gripPipeline.setValuesPit();
-				} else {
-					gripPipeline.setValuesInFile();
-					gripPipeline.setValues();
-				}
-				//gripPipeline.setValuesInFile();
-				//gripPipeline.setValues();
+				gripPipeline.setValuesInFile();
+				gripPipeline.setValues();
 				
 				gripPipeline.hsvThreshold(hsv, hsv);
 				this.hsvSource.putFrame(hsv);//Presents only the hsv in port 1186
